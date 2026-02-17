@@ -46,6 +46,9 @@ jobs:
           SIZE=$(curl -s -L "$URL" | wc -c)
           if [ "$SIZE" -gt 0 ]; then
             echo "all.yaml is ready ($SIZE bytes)"
+            curl -s -L "$URL" > all.yaml
+            echo "Downloaded all.yaml"
+            cat all.yaml
             break
           fi
 
