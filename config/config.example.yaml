@@ -20,7 +20,7 @@ check-interval: 120
 success-limit: 0
 
 # 超时时间(毫秒)(节点的最大延迟)
-timeout: 5000
+timeout: 2000
 # 延迟测试URL
 # 一些高级用法需要自己摸索，比如想要拒绝某些CF类节点，可将url替换为https://www.cloudflare.com
 alive-test-url: http://gstatic.com/generate_204
@@ -29,9 +29,9 @@ alive-test-url: http://gstatic.com/generate_204
 # 如果找不到稳定的测速地址，可以自建测速地址
 speed-test-url: https://github.com/AaronFeng753/Waifu2x-Extension-GUI/releases/download/v2.21.12/Waifu2x-Extension-GUI-v2.21.12-Portable.7z
 # 最低测速结果舍弃(KB/s)
-min-speed: 512
+min-speed: 4096
 # 下载测试时间(s)(与下载链接大小相关，默认最大测试10s)
-download-timeout: 10
+download-timeout: 5
 # 单节点测速下载数据大小(MB)限制，0为不限
 download-mb: 20
 # 总下载速度速度限制(MB/s)，0为不限
