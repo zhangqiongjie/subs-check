@@ -35,12 +35,14 @@ jobs:
         git checkout master
         git rebase upstream/master -X theirs || true
         git push origin master --force-with-lease
-        go run . -f ./config/config.yaml
+        go run . -f ./config/config.example.yaml
+        ls -lh
+        tree ./
         
 
     - name: Expose config
       run: |
-        python3 -m http.server 8000
+        python3 -m http.server 8000 
 
 
     - name: Run subconverter
