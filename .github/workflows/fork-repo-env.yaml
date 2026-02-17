@@ -39,18 +39,23 @@ jobs:
         INTERVAL=30    # 每隔 30 秒检查一次
         COUNT=0
 
+
         echo "Waiting for $URL to have content..."
-        sleep 30
 
         while true; do
-          # 获取文件内容长度
-          SIZE=$(curl -s -L "$URL" | wc -c)
-          if [ "$SIZE" -gt 0 ]; then
-            echo "all.yaml is ready ($SIZE bytes)"
-            curl -s -L "$URL" > all.yaml
-            echo "Downloaded all.yaml"
-            cat all.yaml
-            break
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+          if [ "$STATUS" = "200" ]; then
+            # 获取文件内容长度
+            SIZE=$(curl -s -L "$URL" | wc -c)
+            if [ "$SIZE" -gt 0 ]; then
+              echo "all.yaml is ready ($SIZE bytes)"
+              curl -s -L "$URL" > all.yaml
+              echo "Downloaded all.yaml"
+              cat all.yaml
+              break
+            fi
+          else
+            echo "Waiting for $URL to return 200 OK, current status: $STATUS"
           fi
 
           COUNT=$((COUNT + INTERVAL))
