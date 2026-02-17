@@ -1,4 +1,4 @@
-name: Make V2Ray Subscription
+name: Update V2Ray Subscription
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   convert:
-    name: Convert YAML
+    name: Update V2Ray Subscription
     runs-on: ubuntu-latest
 
     steps:
@@ -32,9 +32,9 @@ jobs:
         git remote add upstream https://github.com/beck-8/subs-check.git
         git remote -v
         git fetch upstream
-        git checkout main
-        git merge upstream/main
-        git push origin main
+        git checkout master
+        git merge upstream/master
+        git push origin master
         go run . -f ./config/config.yaml
         
 
