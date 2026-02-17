@@ -6,6 +6,16 @@ on:
       - main
   workflow_dispatch:
 
+# Please keep usage of `env` to a minimum or avoid altogether.
+# It's much better to be explicitly passing variables to steps/actions/scripts
+# rather than using environmental variables that are available everywhere
+# and you can't easily tell what they affect.
+env: {}
+
+concurrency:
+  group: update-v2ray-subscription
+  cancel-in-progress: true
+
 jobs:
   convert:
     name: Update V2Ray Subscription
@@ -20,12 +30,6 @@ jobs:
       with:
         node-version: '18'
 
-    - name: Install Subconverter
-      run: |
-        wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
-        tar -zxvf subconverter_linux64.tar.gz
-        chmod +x subconverter/subconverter
-
     - name: Create config for subconverter
       run: |
         git remote -v
@@ -39,14 +43,24 @@ jobs:
         ls -lh
         tree ./
 
+    # - name: Install Subconverter
+    #   run: |
+    #     wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
+    #     tar -zxvf subconverter_linux64.tar.gz
+    #     chmod +x subconverter/subconverter
+
 
     - name: Run subconverter
       run: |
+        cd /github/workspace/output
         python3 -m http.server 8000 &
         HTTP_PID=$!
         echo "HTTP server started with PID $HTTP_PID"
         sleep 5
         # 启动 subconverter
+        wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
+        tar -zxvf subconverter_linux64.tar.gz
+        chmod +x subconverter/subconverter
         echo "Starting subconverter..."
         cd subconverter
         ./subconverter &
@@ -54,7 +68,7 @@ jobs:
 
         # 请求 subconverter 默认转成 vless 订阅（Base64）
         # curl "http://localhost:25500/sub?target=v2ray&list=all" -o /github/workspace/result.txt
-        curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8000/sub.yaml" -o sub.txt
+        curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8000/all.yaml" -o sub.txt
 
         # 检查是否成功
         if [ $? -ne 0 ]; then
