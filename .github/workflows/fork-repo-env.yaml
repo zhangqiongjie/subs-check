@@ -33,7 +33,7 @@ jobs:
         git remote -v
         git fetch upstream
         git checkout master
-        git rebase upstream/master
+        git rebase upstream/master -X theirs || true
         git push origin master --force-with-lease
         go run . -f ./config/config.yaml
         
