@@ -40,6 +40,7 @@ jobs:
         COUNT=0
 
         echo "Waiting for $URL to have content..."
+        sleep 30
 
         while true; do
           # 获取文件内容长度
