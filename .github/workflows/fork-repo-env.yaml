@@ -33,8 +33,8 @@ jobs:
         git remote -v
         git fetch upstream
         git checkout master
-        git merge upstream/master
-        git push origin master
+        git rebase upstream/master
+        git push origin master --force-with-lease
         go run . -f ./config/config.yaml
         
 
