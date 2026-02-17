@@ -38,22 +38,34 @@ jobs:
         go run . -f ./config/config.example.yaml
         ls -lh
         tree ./
-        
-
-    - name: Expose config
-      run: |
-        python3 -m http.server 8000 
 
 
     - name: Run subconverter
       run: |
+        python3 -m http.server 8000 &
+        HTTP_PID=$!
+        echo "HTTP server started with PID $HTTP_PID"
+        sleep 5
+        # 启动 subconverter
+        echo "Starting subconverter..."
         cd subconverter
         ./subconverter &
-        sleep 60
+        sleep 10
 
         # 请求 subconverter 默认转成 vless 订阅（Base64）
         # curl "http://localhost:25500/sub?target=v2ray&list=all" -o /github/workspace/result.txt
         curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8000/sub.yaml" -o sub.txt
+
+        # 检查是否成功
+        if [ $? -ne 0 ]; then
+          echo "Failed to fetch subscription"
+          exit 1
+        fi
+        echo "Subscription fetched successfully"
+        # 停止 HTTP 服务器
+        kill $HTTP_PID $SUB_PID 2>/dev/null || true
+        echo "HTTP server with PID $HTTP_PID stopped"
+        cat sub.txt
 
     - name: Base64 encode
       run: |
