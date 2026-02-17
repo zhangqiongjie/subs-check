@@ -1,0 +1,59 @@
+name: Convert Clash YAML to V2Ray Subscription
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  convert:
+    name: Convert YAML
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install Subconverter
+      run: |
+        git clone https://github.com/tindy2013/subconverter.git
+        cd subconverter
+        # 安装依赖，如果需要的话
+        # (有些人用 binary 版本更快)
+        chmod +x subconverter
+
+    - name: Create config for subconverter
+      run: |
+        mkdir -p ./subconverter/data
+        cat << 'EOF' > ./subconverter/data/config.yaml
+        port: 25500
+        proxy-groups: []
+        proxies: []
+        # 这里指向你的输入 Clash YAML
+        yaml: "/github/workspace/config.yaml"
+        EOF
+
+    - name: Run subconverter
+      run: |
+        cd subconverter
+        ./subconverter -config ./data/config.yaml &
+        sleep 5
+
+        # 请求 subconverter 默认转成 vless 订阅（Base64）
+        curl "http://localhost:25500/sub?target=v2ray&list=all" -o /github/workspace/result.txt
+
+    - name: Base64 encode
+      run: |
+        cat /github/workspace/result.txt | base64 -w 0 > ./github/workspace/sub.txt
+
+    - name: Upload subscription as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: v2ray-subscription
+        path: ./sub.txt

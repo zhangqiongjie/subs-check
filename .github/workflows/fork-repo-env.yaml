@@ -1,0 +1,58 @@
+name: Make V2Ray Subscription
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  convert:
+    name: Convert YAML
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install Subconverter
+      run: |
+        wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
+        tar -zxvf subconverter_linux64.tar.gz
+        chmod +x subconverter/subconverter
+
+    - name: Create config for subconverter
+      run: |
+        git remote -v
+        git remote add upstream https://github.com/原作者用户名/项目.git
+        git remote -v
+        git fetch upstream
+        git checkout main
+        git merge upstream/main
+        git push origin main
+        go run . -f ./config/config.yaml
+        
+
+    - name: Expose config
+      run: |
+        python3 -m http.server 8000
+
+
+    - name: Run subconverter
+      run: |
+        cd subconverter
+        ./subconverter &
+        sleep 60
+
+        # 请求 subconverter 默认转成 vless 订阅（Base64）
+        # curl "http://localhost:25500/sub?target=v2ray&list=all" -o /github/workspace/result.txt
+        curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8000/sub.yaml" -o sub.txt
+
+    - name: Base64 encode
+      run: |
+        cat sub.txt | base64 -w 0 > ./github/workspace/sub.txt
