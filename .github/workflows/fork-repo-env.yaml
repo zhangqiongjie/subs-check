@@ -80,7 +80,7 @@ jobs:
     - name: Cleanup
       run: |
         # 杀掉后台进程
-        kill $(cat ../go.pid)
+        kill $(cat go.pid)
         kill $(cat subconverter.pid)
 
 
