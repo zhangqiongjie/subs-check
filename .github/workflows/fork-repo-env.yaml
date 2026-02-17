@@ -29,7 +29,7 @@ jobs:
     - name: Create config for subconverter
       run: |
         git remote -v
-        git remote add upstream https://github.com/原作者用户名/项目.git
+        git remote add upstream https://github.com/beck-8/subs-check.git
         git remote -v
         git fetch upstream
         git checkout main
