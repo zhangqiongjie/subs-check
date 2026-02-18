@@ -27,7 +27,6 @@ jobs:
 
     - name: Start Go program to generate all.yaml
       run: |
-        # 启动 Go 程序在后台
         go run . -f ./config/config.example.yaml &
         echo $! > go.pid
 
@@ -39,9 +38,7 @@ jobs:
         INTERVAL=30    # 每隔 30 秒检查一次
         COUNT=0
 
-
         echo "Waiting for $URL to have content..."
-
         while true; do
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
           if [ "$STATUS" = "200" ]; then
@@ -74,7 +71,7 @@ jobs:
         tar -zxvf subconverter_linux64.tar.gz
         chmod +x subconverter/subconverter
 
-    - name: Run subconverter
+    - name: Prepare subconverter
       run: |
         echo "Starting subconverter..."
         ./subconverter/subconverter &
@@ -82,7 +79,7 @@ jobs:
         sleep 10  # 等待服务启动
 
         until curl -s http://127.0.0.1:25500 > /dev/null; do
-          sleep 1
+          sleep 2
         done
         echo "subconverter ready"
 
@@ -90,6 +87,18 @@ jobs:
         curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8199/all.yaml" -o sub.txt
         ls -lh sub.txt
         echo "Show subscription content:"
+        cat sub.txt || true
+    
+    - name: Run subconverter
+      run: |
+        # 检查是否有生成的订阅文件
+        if [ ! -f sub.txt ]; then
+          echo "sub.txt not found, exiting"
+          exit 1
+        fi
+
+        # 输出订阅内容
+        echo "Subscription content:"
         cat sub.txt || true
 
     - name: Cleanup
@@ -101,6 +110,15 @@ jobs:
     - name: Base64 encode
       run: |
         cat sub.txt | base64 -w 0 > sub.txt
+
+    - name: Update subscription file
+      run: |
+        # 更新订阅文件到仓库
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"
+        git add sub.txt
+        git commit -m "Update subscription file"
+        git push origin master
 
 
     # - name: Set up Node.js
