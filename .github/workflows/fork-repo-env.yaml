@@ -5,6 +5,38 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      min-speed:
+        description: 'Minimum speed in KB/s to keep a node'
+        type: choice
+        options:
+          - '512'  # 512 KB/s
+          - '1024' # 1 MB/s
+          - '2048' # 2 MB/s
+          - '4096' # 4 MB/s
+          - '8192' # 8 MB/s
+        required: false
+        default: '4096'
+      download-test-timeout:
+        description: 'Download timeout in seconds'
+        type: choice
+        options:
+          - '2'    # 2 seconds
+          - '4'    # 4 seconds
+          - '8'    # 8 seconds
+        required: false
+        default: '4'
+      speed-test-timeout:
+        description: 'Download speed test timeout in seconds'
+        type: choice
+        options:
+          - '1000'  # 1000 seconds
+          - '2000'  # 2000 seconds
+          - '3000'  # 3000 seconds
+          - '4000'  # 4000 seconds
+          - '5000'  # 5000 seconds
+        required: false
+        default: '2000'
 
 # Please keep usage of `env` to a minimum or avoid altogether.
 # It's much better to be explicitly passing variables to steps/actions/scripts
@@ -25,14 +57,39 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v3
 
+    - name: Sync fork with upstream
+      run: |
+        git remote -v
+        git remote add upstream https://github.com/beck-8/subs-check.git
+        git remote -v
+        git fetch upstream
+        git checkout master
+        git rebase upstream/master -X theirs || true
+        git push origin master --force-with-lease
+
+    - name: Update config
+      uses: mikefarah/yq@v4
+      env:
+        MIN_SPEED: ${{ inputs.min-speed }}
+        DOWNLOAD_TEST_TIMEOUT: ${{ inputs.download-test-timeout }}
+        SPEED_TEST_TIMEOUT: ${{ inputs.speed-test-timeout }}
+      with:
+        cmd: >
+          yq -i '
+            .min-speed = env(MIN_SPEED) |
+            .download-timeout = env(DOWNLOAD_TEST_TIMEOUT) |
+            .timeout = env(SPEED_TEST_TIMEOUT)
+          ' config.example.yaml
+
     - name: Start Go program to generate all.yaml
+      id: run_go_program
       run: |
         go run . -f ./config/config.example.yaml &
         echo $! > go.pid
 
-    - name: Wait for all.yaml
+    - name: Wait for proxies to be ready
+      if: steps.run_go_program.outputs.status == 'success'
       run: |
-        # 等待 all.yaml 出现且有内容
         URL="http://127.0.0.1:8199/all.yaml"
         MAX_WAIT=3600   # 最多等 3600 秒
         INTERVAL=30    # 每隔 30 秒检查一次
@@ -70,8 +127,10 @@ jobs:
         wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
         tar -zxvf subconverter_linux64.tar.gz
         chmod +x subconverter/subconverter
+        rm -fr subconverter_linux64.tar.gz
 
-    - name: Prepare subconverter
+    - name: Run subconverter service
+      id: run_subconverter_service
       run: |
         echo "Starting subconverter..."
         ./subconverter/subconverter &
@@ -83,13 +142,9 @@ jobs:
         done
         echo "subconverter ready"
 
-        # 调用 API 转换
-        curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8199/all.yaml" -o sub.txt
-        ls -lh sub.txt
-        echo "Show subscription content:"
-        cat sub.txt || true
-    
-    - name: Run subconverter
+    - name: Run subconverter API
+      if: steps.run_subconverter_service.outputs.status == 'success'
+      id: run_subconverter_api
       run: |
         # 检查是否有生成的订阅文件
         if [ ! -f sub.txt ]; then
@@ -97,21 +152,31 @@ jobs:
           exit 1
         fi
 
+        # 调用 API 转换
+        curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8199/all.yaml" -o sub.txt
+        ls -lh sub.txt
+        echo "Show subscription content:"
+        cat sub.txt || true
+
         # 输出订阅内容
         echo "Subscription content:"
         cat sub.txt || true
 
-    - name: Cleanup
+    - name: Cleanup background processes
+      if: always()
       run: |
         # 杀掉后台进程
         [ -f go.pid ] && kill $(cat go.pid)
         [ -f subconverter.pid ] && kill $(cat subconverter.pid)
 
     - name: Base64 encode
+      if: steps.run_subconverter_api.outputs.status == 'success'
+      id: base64_encode
       run: |
         cat sub.txt | base64 -w 0 > sub.txt
 
     - name: Update subscription file
+      if: steps.base64_encode.outputs.status == 'success'
       run: |
         # 更新订阅文件到仓库
         git config --global user.name "GitHub Actions"
@@ -119,104 +184,3 @@ jobs:
         git add sub.txt
         git commit -m "Update subscription file"
         git push origin master
-
-
-    # - name: Set up Node.js
-    #   uses: actions/setup-node@v3
-    #   with:
-    #     node-version: '18'
-    
-    # - name: Create config for subconverter
-    #   run: |
-    #     go run . -f ./config/config.example.yaml & 
-    #     PID=$!
-    #     echo "Config generation started with PID $PID"
-    #     ls -lh
-    #     tree ./
-
-    # - name: Run subconverter
-    #   run: |
-    #     go run . -f ./config/config.example.yaml & 
-    #     PID=$!
-    #     echo "Config generation started with PID $PID"
-
-    #     while
-
-    #     # 启动 subconverter
-    #     wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
-    #     tar -zxvf subconverter_linux64.tar.gz
-    #     chmod +x subconverter/subconverter
-    #     echo "Starting subconverter..."
-    #     cd subconverter
-    #     ./subconverter &
-    #     sleep 10
-
-    #     # 请求 subconverter 默认转成 vless 订阅（Base64）
-    #     # curl "http://localhost:25500/sub?target=v2ray&list=all" -o /github/workspace/result.txt
-    #     curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8199/all.yaml" -o sub.txt
-
-    #     # 检查是否成功
-    #     if [ $? -ne 0 ]; then
-    #       echo "Failed to fetch subscription"
-    #       exit 1
-    #     fi
-    #     echo "Subscription fetched successfully"
-    #     # 停止 HTTP 服务器
-    #     kill $PID $SUB_PID 2>/dev/null || true
-    #     echo "HTTP server with PID $PID stopped"
-    #     cat sub.txt
-
-    # - name: Create config for subconverter
-    #   run: |
-    #     git remote -v
-    #     git remote add upstream https://github.com/beck-8/subs-check.git
-    #     git remote -v
-    #     git fetch upstream
-    #     git checkout master
-    #     git rebase upstream/master -X theirs || true
-    #     git push origin master --force-with-lease
-    #     go run . -f ./config/config.example.yaml
-    #     ls -lh
-    #     tree ./
-
-    # - name: Install Subconverter $GITHUB_WORKSPACE
-    #   run: |
-    #     wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
-    #     tar -zxvf subconverter_linux64.tar.gz
-    #     chmod +x subconverter/subconverter
-
-    # http://127.0.0.1:8199/all.yaml
-
-
-    # - name: Run subconverter
-    #   run: |
-    #     cd /github/workspace/output
-    #     python3 -m http.server 8000 &
-    #     HTTP_PID=$!
-    #     echo "HTTP server started with PID $HTTP_PID"
-    #     sleep 5
-    #     # 启动 subconverter
-    #     wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
-    #     tar -zxvf subconverter_linux64.tar.gz
-    #     chmod +x subconverter/subconverter
-    #     echo "Starting subconverter..."
-    #     cd subconverter
-    #     ./subconverter &
-    #     sleep 10
-
-    #     # 请求 subconverter 默认转成 vless 订阅（Base64）
-    #     # curl "http://localhost:25500/sub?target=v2ray&list=all" -o /github/workspace/result.txt
-    #     curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8000/all.yaml" -o sub.txt
-
-    #     # 检查是否成功
-    #     if [ $? -ne 0 ]; then
-    #       echo "Failed to fetch subscription"
-    #       exit 1
-    #     fi
-    #     echo "Subscription fetched successfully"
-    #     # 停止 HTTP 服务器
-    #     kill $HTTP_PID $SUB_PID 2>/dev/null || true
-    #     echo "HTTP server with PID $HTTP_PID stopped"
-    #     cat sub.txt
-
-    
