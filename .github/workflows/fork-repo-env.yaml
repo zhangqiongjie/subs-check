@@ -67,6 +67,7 @@ jobs:
         git checkout master
         git rebase upstream/master -X theirs || true
         git push origin master --force-with-lease
+        cp ./config/config.example.yaml ./config/config.yaml
 
     - name: Update config
       uses: mikefarah/yq@v4
@@ -80,12 +81,12 @@ jobs:
             .min-speed = env(MIN_SPEED) |
             .download-timeout = env(DOWNLOAD_TEST_TIMEOUT) |
             .timeout = env(SPEED_TEST_TIMEOUT)
-          ' ./config/config.example.yaml
+          ' ./config/config.yaml
 
     - name: Start Go program to generate all.yaml
       id: run_go_program
       run: |
-        go run . -f ./config/config.example.yaml &
+        go run . -f ./config/config.yaml &
         echo $! > go.pid
 
     - name: Wait for proxies to be ready
@@ -195,6 +196,7 @@ jobs:
         # 更新订阅文件到仓库
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
+        git status
         git add sub.txt
         git commit -m "Update subscription file"
         git push origin master
