@@ -154,13 +154,17 @@ jobs:
 
         # 调用 API 转换
         curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8199/all.yaml" -o sub.txt
-        ls -lh sub.txt
         echo "Show subscription content:"
-        cat sub.txt || true
+        echo "=== File info ==="
+        ls -lh sub.txt
+        wc -l sub.txt
 
-        # 输出订阅内容
-        echo "Subscription content:"
-        cat sub.txt || true
+        echo "=== First 500 chars ==="
+        head -c 500 sub.txt
+        echo
+
+        echo "=== Hex preview ==="
+        xxd -l 200 sub.txt
 
     - name: Cleanup background processes
       if: always()
