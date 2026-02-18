@@ -67,30 +67,36 @@ jobs:
           sleep $INTERVAL
         done
 
-    - name: Run subconverter
+    - name: Download and prepare subconverter
       run: |
-        sleep 3
-        # 启动 subconverter
-
         # Download subconverter
         wget https://github.com/tindy2013/subconverter/releases/latest/download/subconverter_linux64.tar.gz
         tar -zxvf subconverter_linux64.tar.gz
         chmod +x subconverter/subconverter
+
+    - name: Run subconverter
+      run: |
         echo "Starting subconverter..."
-        cd subconverter
-        ./subconverter &
+        ./subconverter/subconverter &
         echo $! > subconverter.pid
         sleep 10  # 等待服务启动
 
+        until curl -s http://127.0.0.1:25500 > /dev/null; do
+          sleep 1
+        done
+        echo "subconverter ready"
+
         # 调用 API 转换
         curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8199/all.yaml" -o sub.txt
-        cat sub.txt
+        ls -lh sub.txt
+        echo "Show subscription content:"
+        cat sub.txt || true
 
     - name: Cleanup
       run: |
         # 杀掉后台进程
-        kill $(cat go.pid)
-        kill $(cat subconverter.pid)
+        [ -f go.pid ] && kill $(cat go.pid)
+        [ -f subconverter.pid ] && kill $(cat subconverter.pid)
 
 
     # - name: Set up Node.js
