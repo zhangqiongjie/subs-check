@@ -98,6 +98,10 @@ jobs:
         [ -f go.pid ] && kill $(cat go.pid)
         [ -f subconverter.pid ] && kill $(cat subconverter.pid)
 
+    - name: Base64 encode
+      run: |
+        cat sub.txt | base64 -w 0 > sub.txt
+
 
     # - name: Set up Node.js
     #   uses: actions/setup-node@v3
@@ -197,6 +201,4 @@ jobs:
     #     echo "HTTP server with PID $HTTP_PID stopped"
     #     cat sub.txt
 
-    - name: Base64 encode
-      run: |
-        cat sub.txt | base64 -w 0 > ./github/workspace/sub.txt
+    
