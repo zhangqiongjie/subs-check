@@ -153,6 +153,7 @@ jobs:
 
         # 调用 API 转换
         curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8199/all.yaml" -o sub.txt
+        echo "" >> sub.txt
         echo "Show subscription content:"
         echo "=== File info ==="
         ls -lh sub.txt
