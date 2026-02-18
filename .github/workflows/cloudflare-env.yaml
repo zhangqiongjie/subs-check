@@ -1,5 +1,5 @@
-name: Update V2Ray Subscription in Cloudflare Worker
-run-name: Update V2Ray Subscription min-speed=${{ inputs.min-speed }} download-test-timeout=${{ inputs.download-test-timeout }} speed-test-timeout=${{ inputs.speed-test-timeout }}
+name: Update Cloudflare Worker Subscription
+run-name: Update Cloudflare Worker Subscription min-speed=${{ inputs.min-speed }} download-test-timeout=${{ inputs.download-test-timeout }} speed-test-timeout=${{ inputs.speed-test-timeout }}
 
 on:
   push:
@@ -51,7 +51,7 @@ env: {}
 
 jobs:
   convert:
-    name: Update V2Ray Subscription
+    name: Update Cloudflare Worker Subscription
     runs-on: ubuntu-latest
 
     steps:
@@ -91,3 +91,42 @@ jobs:
       id: run_go_program
       run: |
         go run . -f ./config/config.example.yaml &
+        echo $! > go.pid
+
+    - name: Wait for proxies to be ready
+      run: |
+        URL="http://127.0.0.1:8199/all.yaml"
+        MAX_WAIT=3600   # 最多等 3600 秒
+        INTERVAL=30    # 每隔 30 秒检查一次
+        COUNT=0
+
+        echo "Waiting for $URL to have content..."
+        while true; do
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+          if [ "$STATUS" = "200" ]; then
+            # 获取文件内容长度
+            SIZE=$(curl -s -L "$URL" | wc -c)
+            if [ "$SIZE" -gt 0 ]; then
+              echo "all.yaml is ready ($SIZE bytes)"
+              curl -s -L "$URL" > all.yaml
+              echo "Downloaded all.yaml"
+              cat all.yaml
+              break
+            fi
+          else
+            echo "Waiting for $URL to return 200 OK, current status: $STATUS"
+          fi
+
+          COUNT=$((COUNT + INTERVAL))
+          if [ "$COUNT" -ge "$MAX_WAIT" ]; then
+            echo "Timeout waiting for all.yaml"
+            exit 1
+          fi
+
+          sleep $INTERVAL
+        done
+
+    - name: Cleanup background processes
+      run: |
+        # 杀掉后台进程
+        [ -f go.pid ] && kill $(cat go.pid)

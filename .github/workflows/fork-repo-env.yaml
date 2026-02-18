@@ -1,4 +1,4 @@
-name: Update V2Ray Subscription in GitHub pages
+name: Update GitHub Pages Subscription
 run-name: Update V2Ray Subscription min-speed=${{ inputs.min-speed }} download-test-timeout=${{ inputs.download-test-timeout }} speed-test-timeout=${{ inputs.speed-test-timeout }}
 
 on:
@@ -51,7 +51,7 @@ env: {}
 
 jobs:
   convert:
-    name: Update V2Ray Subscription
+    name: Update GitHub Pages Subscription
     runs-on: ubuntu-latest
 
     steps:
