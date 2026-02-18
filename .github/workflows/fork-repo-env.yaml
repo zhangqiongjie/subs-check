@@ -154,6 +154,11 @@ jobs:
         # 调用 API 转换
         curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8199/all.yaml" -o sub_raw.txt
         fold -w 150 sub_raw.txt > sub.txt
+        echo "----sub_raw.txt content----"
+        cat sub_raw.txt
+        echo "----sub.txt content----"
+        cat sub.txt
+        echo "----sub.txt file info----"
         echo "Show subscription content:"
         cat sub.txt
         echo "=== File info ==="
@@ -176,10 +181,10 @@ jobs:
     - name: Base64 encode
       id: base64_encode
       run: |
+        cat sub.txt
         cat sub.txt | base64 -w 0 > sub.txt
 
     - name: Update subscription file
-      if: steps.base64_encode.outputs.status == 'success'
       run: |
         # 更新订阅文件到仓库
         git config --global user.name "GitHub Actions"
