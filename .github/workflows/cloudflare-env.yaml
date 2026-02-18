@@ -88,6 +88,13 @@ jobs:
             .worker-token = env(WORKER_TOKEN)
           ' ./config/config.example.yaml
 
+    - name: Show config
+      run: |
+        echo "=== Config content ==="
+        cat ./config/config.example.yaml
+        echo "=== File info ==="
+        ls -lh ./config/config.example.yaml
+
     - name: Start Go program to generate all.yaml
       id: run_go_program
       run: |

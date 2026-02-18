@@ -152,9 +152,10 @@ jobs:
         fi
 
         # 调用 API 转换
-        curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8199/all.yaml" -o sub.txt
-        echo "" >> sub.txt
+        curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8199/all.yaml" -o sub_raw.txt
+        fold -w 150 sub_raw.txt > sub.txt
         echo "Show subscription content:"
+        cat sub.txt
         echo "=== File info ==="
         ls -lh sub.txt
         wc -l sub.txt
@@ -173,7 +174,6 @@ jobs:
         [ -f subconverter.pid ] && kill $(cat subconverter.pid)
 
     - name: Base64 encode
-      if: steps.run_subconverter_api.outputs.status == 'success'
       id: base64_encode
       run: |
         cat sub.txt | base64 -w 0 > sub.txt
