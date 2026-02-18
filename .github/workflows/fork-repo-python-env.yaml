@@ -1,4 +1,4 @@
-name: Update GitHub Pages Subscription
+name: Update GitHub Pages Subscription Python Environment
 run-name: Update GitHub Pages Subscription min-speed=${{ inputs.min-speed }} download-test-timeout=${{ inputs.download-test-timeout }} speed-test-timeout=${{ inputs.speed-test-timeout }}
 
 on:
@@ -145,6 +145,8 @@ jobs:
     - name: Run subconverter API
       id: run_subconverter_api
       run: |
+        python3 -m http.server 8000 &
+        sleep 10
         # 检查是否有生成的订阅文件
         if [ ! -f sub.txt ]; then
           echo "sub.txt not found, exiting"
@@ -152,11 +154,11 @@ jobs:
         fi
 
         # 调用 API 转换
-        curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8199/all.yaml" -o sub_raw.txt
-        fold -w 150 sub_raw.txt > sub.txt
-        echo "----sub_raw.txt content----"
-        cat sub_raw.txt
-        echo "----sub.txt content----"
+        curl -v "http://127.0.0.1:25500/sub?target=v2ray&url=http://127.0.0.1:8000/all.yaml" -o sub.txt
+        #fold -w 150 sub_raw.txt > sub.txt
+        # echo "----sub_raw.txt content----"
+        # cat sub_raw.txt
+        # echo "----sub.txt content----"
         cat sub.txt
         echo "----sub.txt file info----"
         echo "Show subscription content:"
