@@ -79,7 +79,7 @@ jobs:
             .min-speed = env(MIN_SPEED) |
             .download-timeout = env(DOWNLOAD_TEST_TIMEOUT) |
             .timeout = env(SPEED_TEST_TIMEOUT)
-          ' config.example.yaml
+          ' ./config/config.example.yaml
 
     - name: Start Go program to generate all.yaml
       id: run_go_program
