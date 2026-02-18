@@ -88,7 +88,6 @@ jobs:
         echo $! > go.pid
 
     - name: Wait for proxies to be ready
-      if: steps.run_go_program.outputs.status == 'success'
       run: |
         URL="http://127.0.0.1:8199/all.yaml"
         MAX_WAIT=3600   # 最多等 3600 秒
@@ -143,7 +142,6 @@ jobs:
         echo "subconverter ready"
 
     - name: Run subconverter API
-      if: steps.run_subconverter_service.outputs.status == 'success'
       id: run_subconverter_api
       run: |
         # 检查是否有生成的订阅文件
@@ -167,7 +165,6 @@ jobs:
         xxd -l 200 sub.txt
 
     - name: Cleanup background processes
-      if: always()
       run: |
         # 杀掉后台进程
         [ -f go.pid ] && kill $(cat go.pid)
