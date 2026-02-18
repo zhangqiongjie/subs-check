@@ -172,6 +172,12 @@ jobs:
         echo "=== Hex preview ==="
         xxd -l 200 sub.txt
 
+    - name: Upload sub.txt to Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: sub.txt
+        path: sub.txt
+
     - name: Cleanup background processes
       run: |
         # 杀掉后台进程
