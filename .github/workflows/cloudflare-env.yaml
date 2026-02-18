@@ -82,7 +82,7 @@ jobs:
             .min-speed = env(MIN_SPEED) |
             .download-timeout = env(DOWNLOAD_TEST_TIMEOUT) |
             .timeout = env(SPEED_TEST_TIMEOUT) |
-            .save-method = r2 |
+            .save-method = "r2" |
             .worker-url = env(WORKER_URL) |
             .worker-token = env(WORKER_TOKEN)
           ' ./config/config.example.yaml
