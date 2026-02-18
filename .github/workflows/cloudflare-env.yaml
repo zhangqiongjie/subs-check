@@ -1,59 +1,93 @@
-name: Convert Clash YAML to V2Ray Subscription
+name: Update V2Ray Subscription in Cloudflare Worker
+run-name: Update V2Ray Subscription min-speed=${{ inputs.min-speed }} download-test-timeout=${{ inputs.download-test-timeout }} speed-test-timeout=${{ inputs.speed-test-timeout }}
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      min-speed:
+        description: 'Minimum speed in KB/s to keep a node'
+        type: choice
+        options:
+          - '512'  # 512 KB/s
+          - '1024' # 1 MB/s
+          - '2048' # 2 MB/s
+          - '4096' # 4 MB/s
+          - '8192' # 8 MB/s
+        required: false
+        default: '4096'
+      download-test-timeout:
+        description: 'Download timeout in seconds'
+        type: choice
+        options:
+          - '2'    # 2 seconds
+          - '4'    # 4 seconds
+          - '8'    # 8 seconds
+        required: false
+        default: '4'
+      speed-test-timeout:
+        description: 'Download speed test timeout in seconds'
+        type: choice
+        options:
+          - '1000'  # 1000 seconds
+          - '2000'  # 2000 seconds
+          - '3000'  # 3000 seconds
+          - '4000'  # 4000 seconds
+          - '5000'  # 5000 seconds
+        required: false
+        default: '2000'
+
+# Please keep usage of `env` to a minimum or avoid altogether.
+# It's much better to be explicitly passing variables to steps/actions/scripts
+# rather than using environmental variables that are available everywhere
+# and you can't easily tell what they affect.
+env: {}
+
+# concurrency:
+#   group: update-v2ray-subscription
+#   cancel-in-progress: true
 
 jobs:
   convert:
-    name: Convert YAML
+    name: Update V2Ray Subscription
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repo
       uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
+    - name: Sync fork with upstream
+      run: |
+        git remote -v
+        git remote add upstream https://github.com/beck-8/subs-check.git
+        git remote -v
+        git fetch upstream
+        git checkout master
+        git rebase upstream/master -X theirs || true
+        git push origin master --force-with-lease
+
+    - name: Update config
+      uses: mikefarah/yq@v4
+      env:
+        MIN_SPEED: ${{ inputs.min-speed }}
+        DOWNLOAD_TEST_TIMEOUT: ${{ inputs.download-test-timeout }}
+        SPEED_TEST_TIMEOUT: ${{ inputs.speed-test-timeout }}
+        WORKER_URL: ${{ vars.CLOUDFLARE_WORKER_URL }}
+        WORKER_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       with:
-        node-version: '18'
+        cmd: >
+          yq -i '
+            .min-speed = env(MIN_SPEED) |
+            .download-timeout = env(DOWNLOAD_TEST_TIMEOUT) |
+            .timeout = env(SPEED_TEST_TIMEOUT) |
+            .save-method = r2 |
+            .worker-url = env(WORKER_URL) |
+            .worker-token = env(WORKER_TOKEN)
+          ' ./config/config.example.yaml
 
-    - name: Install Subconverter
+    - name: Start Go program to generate all.yaml
+      id: run_go_program
       run: |
-        git clone https://github.com/tindy2013/subconverter.git
-        cd subconverter
-        # 安装依赖，如果需要的话
-        # (有些人用 binary 版本更快)
-        chmod +x subconverter
-
-    - name: Create config for subconverter
-      run: |
-        mkdir -p ./subconverter/data
-        cat << 'EOF' > ./subconverter/data/config.yaml
-        port: 25500
-        proxy-groups: []
-        proxies: []
-        # 这里指向你的输入 Clash YAML
-        yaml: "/github/workspace/config.yaml"
-        EOF
-
-    - name: Run subconverter
-      run: |
-        cd subconverter
-        ./subconverter -config ./data/config.yaml &
-        sleep 5
-
-        # 请求 subconverter 默认转成 vless 订阅（Base64）
-        curl "http://localhost:25500/sub?target=v2ray&list=all" -o /github/workspace/result.txt
-
-    - name: Base64 encode
-      run: |
-        cat /github/workspace/result.txt | base64 -w 0 > ./github/workspace/sub.txt
-
-    - name: Upload subscription as artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: v2ray-subscription
-        path: ./sub.txt
+        go run . -f ./config/config.example.yaml &
