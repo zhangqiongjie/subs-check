@@ -176,5 +176,5 @@ jobs:
         git status
         git add sub.txt
         git diff --cached --quiet || git commit -m "Update subscription file"
-        git pull --rebase origin master
+        git pull --rebase --autostash origin master
         git push origin master
